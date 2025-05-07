@@ -1,0 +1,25 @@
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react-swc";
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  base: "/",
+  server: { 
+    port: 12001,
+    host: "0.0.0.0",
+    strictPort: true,
+    cors: true,
+    allowedHosts: true,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "X-Frame-Options": "ALLOWALL",
+      "Content-Security-Policy": "frame-ancestors *"
+    },
+    hmr: {
+      clientPort: 12001,
+      host: "work-2-mtjjtebopywcemtt.prod-runtime.all-hands.dev",
+      protocol: "wss"
+    }
+  },
+});
