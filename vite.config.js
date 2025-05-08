@@ -18,7 +18,7 @@ export default defineConfig({
     },
     hmr: {
       clientPort: 12001,
-      host: "work-2-mtjjtebopywcemtt.prod-runtime.all-hands.dev",
+      host: "work-2-qehdradpibkzmpof.prod-runtime.all-hands.dev",
       protocol: "wss"
     }
   },

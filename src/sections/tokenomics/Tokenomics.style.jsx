@@ -14,13 +14,13 @@ const fadeInUp = keyframes`
 
 const pulse = keyframes`
   0% {
-    box-shadow: 0 0 0 0 rgba(29, 255, 150, 0.4);
+    box-shadow: 0 0 0 0 rgba(var(--accent-color-rgb, 29, 255, 150), 0.4);
   }
   70% {
-    box-shadow: 0 0 0 10px rgba(29, 255, 150, 0);
+    box-shadow: 0 0 0 10px rgba(var(--accent-color-rgb, 29, 255, 150), 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(29, 255, 150, 0);
+    box-shadow: 0 0 0 0 rgba(var(--accent-color-rgb, 29, 255, 150), 0);
   }
 `;
 
@@ -85,55 +85,108 @@ const TokenomicsWrapper = styled.section`
     animation: ${fadeInUp} 0.8s ease-out 0.3s both;
 
     .chart-wrapper {
-      width: 910px; /* Increased width by 30% from 700px */
-      height: 845px; /* Increased height by 30% from 650px */
+      width: 800px; /* Increased from 700px to accommodate larger chart */
+      height: 800px; /* Increased from 700px to accommodate larger chart */
       flex-shrink: 0;
       position: relative;
-      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.15));
       transition: transform 0.3s ease;
       display: flex;
       justify-content: center;
       align-items: center;
       z-index: 1;
-      overflow: visible; /* Allow content to overflow for legend */
-      padding-bottom: 80px; /* Additional padding for legend */
+      overflow: visible; /* Allow content to overflow for tooltip */
+      padding: 20px;
+      border-radius: 50%;
+      background: transparent;
 
       &:hover {
         transform: scale(1.02);
       }
 
-      /* Add glow effect around the chart */
-      &:after {
-        content: "";
-        position: absolute;
-        top: -10px;
-        left: -10px;
-        right: -10px;
-        bottom: -10px;
-        border-radius: 50%;
-        z-index: -1;
-        background: radial-gradient(circle at center, rgba(var(--accent-color-rgb, 29, 255, 150), 0.2) 0%, transparent 70%);
-      }
+      /* No glow effect */
 
-      canvas {
+      .custom-pie-chart {
         cursor: pointer;
         border-radius: 50%;
-        /* Canvas styling to ensure proper size */
         max-width: 100%;
         max-height: 100%;
+        position: relative;
+        z-index: 1;
       }
       
-      /* Hide chart legends and titles but keep the pie chart visible */
-      .chartjs-legend {
-        display: none !important;
+      /* Tooltip styling */
+      .pie-chart-tooltip {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(10px);
+        border-radius: 10px;
+        padding: 15px 20px;
+        z-index: 10;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        pointer-events: none;
+        transition: all 0.3s ease;
+        animation: fadeIn 0.3s ease-out;
+        
+        .tooltip-title {
+          font-family: ${({ theme }) => theme.fonts.title2};
+          font-size: 20px;
+          font-weight: 600;
+          margin-bottom: 5px;
+        }
+        
+        .tooltip-percentage {
+          font-family: ${({ theme }) => theme.fonts.primary};
+          font-size: 24px;
+          color: #ffffff;
+        }
+      }
+      
+      /* Loading indicator */
+      .chart-loading {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 50%;
+        z-index: 5;
+        
+        .loading-spinner {
+          width: 50px;
+          height: 50px;
+          border: 4px solid rgba(255, 255, 255, 0.3);
+          border-radius: 50%;
+          border-top-color: var(--accent-color);
+          animation: spin 1s linear infinite;
+          margin-bottom: 15px;
+        }
+        
+        .loading-text {
+          color: #ffffff;
+          font-family: ${({ theme }) => theme.fonts.primary};
+          font-size: 16px;
+        }
       }
     }
-    
-    /* Hide all text elements in the chart container */
-    .chartjs-render-monitor text,
-    .chartjs-render-monitor tspan {
-      display: none !important;
-    }
+  }
+  
+  /* Keyframes for loading spinner */
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  /* Keyframes for tooltip fade in */
+  @keyframes fadeIn {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
   }
 
   .tokenomics-grid {
@@ -177,9 +230,9 @@ const TokenomicsWrapper = styled.section`
     }
 
     &:hover {
-      transform: translateY(-8px) scale(1.05);
+      transform: translateY(-5px) scale(1.03);
       border-color: var(--accent-color);
-      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
     }
 
     &.active {
@@ -189,6 +242,23 @@ const TokenomicsWrapper = styled.section`
       animation: ${pulse} 2s infinite;
       opacity: 0.9; /* Add 10% transparency when active */
       background: rgba(var(--card-bg-rgb, 20, 20, 20), 0.9);
+    }
+    
+    &.highlighted {
+      box-shadow: 0 0 20px 8px rgba(var(--accent-color-rgb, 29, 255, 150), 0.5);
+      border-color: rgba(var(--accent-color-rgb, 29, 255, 150), 0.8);
+      background: rgba(var(--card-bg-rgb, 20, 20, 20), 0.95);
+      transition: all 0.3s ease;
+      animation: highlightPulse 1.5s ease-in-out;
+      z-index: 10; /* Ensure highlighted card appears above others */
+    }
+    
+    @keyframes highlightPulse {
+      0% { transform: scale(1); box-shadow: 0 0 15px 5px rgba(var(--accent-color-rgb, 29, 255, 150), 0.5); }
+      25% { transform: scale(1.05); box-shadow: 0 0 25px 10px rgba(var(--accent-color-rgb, 29, 255, 150), 0.6); }
+      50% { transform: scale(1.02); box-shadow: 0 0 20px 8px rgba(var(--accent-color-rgb, 29, 255, 150), 0.5); }
+      75% { transform: scale(1.03); box-shadow: 0 0 22px 9px rgba(var(--accent-color-rgb, 29, 255, 150), 0.55); }
+      100% { transform: scale(1); box-shadow: 0 0 15px 5px rgba(var(--accent-color-rgb, 29, 255, 150), 0.5); }
     }
 
     .percentage {
@@ -311,8 +381,8 @@ const TokenomicsWrapper = styled.section`
   @media screen and (max-width: 1199px) {
     .tokenomics-chart-container {
       .chart-wrapper {
-        width: 845px; /* Adjusted for this breakpoint (30% increase from 650px) */
-        height: 780px; /* Adjusted for this breakpoint (30% increase from 600px) */
+        width: 750px; /* Increased from 650px */
+        height: 750px; /* Increased from 650px */
       }
     }
   }
@@ -320,8 +390,22 @@ const TokenomicsWrapper = styled.section`
   @media screen and (max-width: 991px) {
     .tokenomics-chart-container {
       .chart-wrapper {
-        width: 754px; /* Adjusted for this breakpoint (30% increase from 580px) */
-        height: 715px; /* Adjusted for this breakpoint (30% increase from 550px) */
+        width: 700px; /* Increased from 600px */
+        height: 700px; /* Increased from 600px */
+        
+        .pie-chart-tooltip {
+          top: 15px;
+          right: 15px;
+          padding: 12px 16px;
+          
+          .tooltip-title {
+            font-size: 18px;
+          }
+          
+          .tooltip-percentage {
+            font-size: 22px;
+          }
+        }
       }
     }
   }
@@ -341,8 +425,8 @@ const TokenomicsWrapper = styled.section`
       flex-direction: column;
 
       .chart-wrapper {
-        width: 650px; /* Adjusted for this breakpoint (30% increase from 500px) */
-        height: 650px; /* Adjusted for this breakpoint (30% increase from 500px) */
+        width: 650px; /* Increased from 550px */
+        height: 650px; /* Increased from 550px */
       }
     }
   }
@@ -356,8 +440,22 @@ const TokenomicsWrapper = styled.section`
 
     .tokenomics-chart-container {
       .chart-wrapper {
-        width: 520px; /* Adjusted for this breakpoint (30% increase from 400px) */
-        height: 585px; /* Adjusted for this breakpoint (30% increase from 450px) */
+        width: 550px; /* Increased from 450px */
+        height: 550px; /* Increased from 450px */
+        
+        .pie-chart-tooltip {
+          top: 10px;
+          right: 10px;
+          padding: 10px 14px;
+          
+          .tooltip-title {
+            font-size: 16px;
+          }
+          
+          .tooltip-percentage {
+            font-size: 20px;
+          }
+        }
       }
     }
   }
@@ -377,7 +475,35 @@ const TokenomicsWrapper = styled.section`
     }
 
     .tokenomics-chart-container {
-      display: none !important; /* Hide the chart container on mobile */
+      .chart-wrapper {
+        width: 400px; /* Increased from 320px */
+        height: 400px; /* Increased from 320px */
+        
+        .pie-chart-tooltip {
+          top: 5px;
+          right: 5px;
+          padding: 8px 12px;
+          
+          .tooltip-title {
+            font-size: 14px;
+            margin-bottom: 3px;
+          }
+          
+          .tooltip-percentage {
+            font-size: 18px;
+          }
+        }
+        
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border-width: 3px;
+        }
+        
+        .loading-text {
+          font-size: 14px;
+        }
+      }
     }
 
     .tokenomics-details {
@@ -393,6 +519,15 @@ const TokenomicsWrapper = styled.section`
         .item-value {
           font-size: 22px;
         }
+      }
+    }
+  }
+  
+  @media screen and (max-width: 375px) {
+    .tokenomics-chart-container {
+      .chart-wrapper {
+        width: 350px; /* Increased from 280px */
+        height: 350px; /* Increased from 280px */
       }
     }
   }
