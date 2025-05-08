@@ -21,10 +21,13 @@ const Tokenomics = () => {
   const [hoveredSection, setHoveredSection] = useState(null);
   const [highlightedSection, setHighlightedSection] = useState(null);
   const [imagesLoaded, setImagesLoaded] = useState(false);
+  const [animationProgress, setAnimationProgress] = useState(0); // 0 to 1 for animation
+  const [isAnimating, setIsAnimating] = useState(false);
   const canvasRef = useRef(null);
   const segmentImagesRef = useRef([]);
   const centerImageRef = useRef(null);
   const containerRef = useRef(null);
+  const animationRef = useRef(null);
 
   // Enhanced tokenomics data with colors and segment images
   const segmentImages = [segment1Image, segment2Image, segment3Image, segment4Image, segment5Image, segment6Image];
@@ -140,14 +143,46 @@ const Tokenomics = () => {
     enhancedTokenomicsData.forEach((item, index) => {
       const segmentAngle = (item.percentage / totalPercentage) * (Math.PI * 2);
       const endAngle = startAngle + segmentAngle;
-
+      
+      // Calculate if this segment should be detached (selected or highlighted)
+      const isSelected = selectedSection && selectedSection.allocation === item.allocation;
+      const isHighlighted = highlightedSection && highlightedSection.allocation === item.allocation;
+      const shouldDetach = isSelected || isHighlighted;
+      
+      // Calculate detachment distance with animation progress for a more dynamic effect
+      // Base detachment is 2.5% of radius, multiplied by animation progress (0-1) for an extremely smooth animation
+      // For Community Rewards (5% segment), adjust the detachment distance to make it more noticeable but not too extreme
+      const isCommunityRewards = item.allocation === "Community Rewards";
+      // Use a more pronounced detachment multiplier for Community Rewards to improve visibility
+      const detachMultiplier = isCommunityRewards ? 2.5 : 1.3; // 150% more detachment for Community Rewards
+      // Apply a more subtle animation effect for all segments
+      const animationMultiplier = 1.0; // Equal animation strength for consistency
+      // Reduce the base detachment distance to 2.5% of radius for an even more subtle sliding effect
+      const detachDistance = shouldDetach ? 
+        radius * 0.025 * detachMultiplier * (isHighlighted ? animationProgress * animationMultiplier : 1) : 0;
+      
+      // Calculate the midpoint angle of this segment
+      let segmentMidAngle = startAngle + (endAngle - startAngle) / 2;
+      
+      // Calculate the offset for the segment center
+      const offsetX = Math.cos(segmentMidAngle) * detachDistance;
+      const offsetY = Math.sin(segmentMidAngle) * detachDistance;
+      
       // Save context state
       ctx.save();
 
-      // Create clipping path for this segment
+      // Create clipping path for this segment - with detachment if needed
       ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+      
+      // If detached, start from a slightly offset center point
+      const segmentCenterX = centerX + offsetX;
+      const segmentCenterY = centerY + offsetY;
+      
+      // Calculate a slightly larger radius for highlighted segments to create a scale effect
+      const segmentRadius = radius * (isHighlighted ? 1 + 0.05 * animationProgress : 1);
+      
+      ctx.moveTo(segmentCenterX, segmentCenterY);
+      ctx.arc(segmentCenterX, segmentCenterY, segmentRadius, startAngle, endAngle);
       ctx.closePath();
       ctx.clip();
 
@@ -157,16 +192,16 @@ const Tokenomics = () => {
       const imgSize = Math.max(canvas.width, canvas.height) * 1.5;
 
       // Calculate the angle midpoint of this segment to position the image better
-      const midAngle = startAngle + (endAngle - startAngle) / 2;
+      // We already have midAngle defined above, so we'll reuse it
 
       // Offset the image position based on the segment's position in the pie
       // This helps center the image content within each segment
       const offsetDistance = radius * 0.2;
-      const offsetX = Math.cos(midAngle) * offsetDistance;
-      const offsetY = Math.sin(midAngle) * offsetDistance;
+      const imgOffsetX = Math.cos(segmentMidAngle) * offsetDistance;
+      const imgOffsetY = Math.sin(segmentMidAngle) * offsetDistance;
 
-      const imgX = centerX - imgSize / 2 + offsetX;
-      const imgY = centerY - imgSize / 2 + offsetY;
+      const imgX = centerX - imgSize / 2 + imgOffsetX;
+      const imgY = centerY - imgSize / 2 + imgOffsetY;
 
       // Enhance image contrast and saturation before drawing - strengthened filters for better visibility
       ctx.filter = 'contrast(1.5) brightness(1.3) saturate(1.4)';
@@ -178,10 +213,10 @@ const Tokenomics = () => {
       ctx.filter = 'none';
 
       // Add a color overlay with the segment color
-      const isSelected = selectedSection && selectedSection.allocation === item.allocation;
+      const isSegmentSelected = selectedSection && selectedSection.allocation === item.allocation;
       const isHovered = hoveredSection && hoveredSection.allocation === item.allocation;
 
-      if (isSelected || isHovered) {
+      if (isSegmentSelected || isHovered) {
         // Reduce opacity by 15% for selected/hovered segments to increase transparency
         const baseColor = item.overlayColor || item.color;
         ctx.fillStyle = baseColor.replace(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*[\d\.]+\)/, 'rgba($1, $2, $3, 0.35)');
@@ -203,15 +238,44 @@ const Tokenomics = () => {
       const segmentAngle = (item.percentage / totalPercentage) * (Math.PI * 2);
       const endAngle = startAngle + segmentAngle;
 
-      // Draw segment border
-      ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-      ctx.closePath();
-
       // Style for segment border
       const isSelected = selectedSection && selectedSection.allocation === item.allocation;
       const isHovered = hoveredSection && hoveredSection.allocation === item.allocation;
+      const isHighlighted = highlightedSection && highlightedSection.allocation === item.allocation;
+      const shouldDetach = isSelected || isHighlighted;
+      
+      // Calculate detachment distance with animation progress for a more dynamic effect
+      // Reduce base detachment for extremely smooth animation
+      // For Community Rewards (5% segment), adjust the detachment distance to make it more noticeable but not too extreme
+      const isCommunityRewards = item.allocation === "Community Rewards";
+      // Use a more pronounced detachment multiplier for Community Rewards to improve visibility
+      const detachMultiplier = isCommunityRewards ? 2.5 : 1.3; // 150% more detachment for Community Rewards
+      // Apply a more subtle animation effect for all segments
+      const animationMultiplier = 1.0; // Equal animation strength for consistency
+      // Reduce the base detachment distance to 2.5% of radius for an even more subtle sliding effect
+      const detachDistance = shouldDetach ? 
+        radius * 0.025 * detachMultiplier * (isHighlighted ? animationProgress * animationMultiplier : 1) : 0;
+      
+      // Calculate the midpoint angle of this segment
+      let segmentMidAngle = startAngle + (endAngle - startAngle) / 2;
+      
+      // Calculate the offset for the segment center
+      const offsetX = Math.cos(segmentMidAngle) * detachDistance;
+      const offsetY = Math.sin(segmentMidAngle) * detachDistance;
+      
+      // If detached, start from a slightly offset center point
+      const segmentCenterX = centerX + offsetX;
+      const segmentCenterY = centerY + offsetY;
+
+      // Draw segment border
+      ctx.beginPath();
+      ctx.moveTo(segmentCenterX, segmentCenterY);
+      
+      // Calculate a slightly larger radius for highlighted segments to create a scale effect
+      const segmentRadius = radius * (isHighlighted ? 1 + 0.05 * animationProgress : 1);
+      
+      ctx.arc(segmentCenterX, segmentCenterY, segmentRadius, startAngle, endAngle);
+      ctx.closePath();
 
       ctx.lineWidth = isSelected || isHovered ? 3 : 1.5;
       ctx.strokeStyle = isSelected || isHovered ? item.solidColor : "rgba(255, 255, 255, 0.7)";
@@ -339,7 +403,9 @@ const Tokenomics = () => {
     // Convert to positive angle (0 to 2π)
     if (angle < 0) angle += Math.PI * 2;
     // Adjust angle to start from top (12 o'clock position)
-    angle = (angle + Math.PI * 2.5) % (Math.PI * 2);
+    // The original calculation had an issue with the 5% Community Rewards segment
+    // We need to normalize the angle to start from -Math.PI/2 (top position)
+    angle = (angle + Math.PI / 2) % (Math.PI * 2);
 
     // Find which segment the angle corresponds to
     let startAngle = 0;
@@ -348,10 +414,62 @@ const Tokenomics = () => {
     for (let i = 0; i < enhancedTokenomicsData.length; i++) {
       const segmentAngle = (enhancedTokenomicsData[i].percentage / totalPercentage) * (Math.PI * 2);
       const endAngle = startAngle + segmentAngle;
-
-      if (angle >= startAngle && angle < endAngle) {
-        foundSection = enhancedTokenomicsData[i];
-        break;
+      
+      // Special handling for the 5% Community Rewards segment
+      // This segment is small and might need more precise detection
+      const isCommunityRewards = enhancedTokenomicsData[i].allocation === "Community Rewards";
+      const isPublicSale = enhancedTokenomicsData[i].allocation === "Public Sale";
+      
+      // Check if angle is within this segment
+      if (isCommunityRewards) {
+        // For the Community Rewards segment, we need to expand the detection area
+        // since it's only 5% of the pie (18 degrees), making it harder to click
+        
+        // Calculate the midpoint angle of the segment
+        const midAngle = startAngle + (segmentAngle / 2);
+        
+        // Create a wider detection zone around the segment
+        // This makes it easier to click on the small segment
+        const detectionThreshold = Math.PI / 10; // About 18 degrees - further increased for better detection
+        
+        // Check if the mouse angle is within the expanded detection zone
+        const angleDiff = Math.abs(angle - midAngle);
+        const wrappedAngleDiff = Math.min(angleDiff, Math.PI * 2 - angleDiff);
+        
+        // Make sure we're not in the Public Sale area (first segment)
+        // This prevents the Community Rewards detection zone from overlapping with Public Sale
+        if (wrappedAngleDiff <= detectionThreshold) {
+          // Additional check to ensure we're not detecting clicks in the Public Sale area
+          // Public Sale is at the top (12 o'clock position)
+          const publicSaleStart = 0;
+          const publicSaleEnd = (40 / totalPercentage) * (Math.PI * 2); // 40% segment
+          
+          // Only detect Community Rewards if we're not in the Public Sale area
+          // Add a buffer zone to prevent overlap with Public Sale
+          const bufferZone = Math.PI / 25; // About 7.2 degrees buffer - increased for better separation
+          const isInPublicSaleArea = angle >= (publicSaleStart - bufferZone) && angle < (publicSaleEnd + bufferZone);
+          
+          if (!isInPublicSaleArea) {
+            foundSection = enhancedTokenomicsData[i];
+            break;
+          }
+        }
+      } else if (isPublicSale) {
+        // Special handling for Public Sale to ensure its detection area doesn't overlap
+        // with Community Rewards
+        // Add a small buffer to the Public Sale detection area to prevent overlap
+        const bufferZone = Math.PI / 60; // About 3 degrees buffer
+        if (angle >= (startAngle - bufferZone) && angle < (endAngle - bufferZone)) {
+          // Make sure we're not in the expanded detection zone of Community Rewards
+          foundSection = enhancedTokenomicsData[i];
+          break;
+        }
+      } else {
+        // Normal detection for other segments
+        if (angle >= startAngle && angle < endAngle) {
+          foundSection = enhancedTokenomicsData[i];
+          break;
+        }
       }
 
       startAngle = endAngle;
@@ -368,32 +486,136 @@ const Tokenomics = () => {
     setHoveredSection(null);
   };
 
-  // Handle click on canvas
+  // Handle click on canvas with animation
   const handleCanvasClick = () => {
     if (hoveredSection) {
-      // First clear any existing highlight to ensure animation triggers again
-      setHighlightedSection(null);
+      // If we clicked the same section that's already selected, do nothing
+      if (selectedSection && hoveredSection.allocation === selectedSection.allocation) {
+        return;
+      }
       
-      // Use a small timeout to ensure the state change is processed
-      setTimeout(() => {
-        // Set the highlighted section to the hovered section
-        setHighlightedSection(hoveredSection);
-        
-        // Add a subtle animation effect by clearing the highlight after a delay
-        setTimeout(() => {
-          setHighlightedSection(null);
-        }, 1500);
-      }, 10);
+      // If we're already animating, cancel any ongoing animations
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
       
-      // Set the selected section to highlight the corresponding pie chart segment
+      // Set the selected section immediately
       setSelectedSection(hoveredSection);
+      
+      // Set the highlighted section immediately
+      setHighlightedSection(hoveredSection);
+      
+      // Start with a small initial progress to show immediate feedback
+      setAnimationProgress(0.1);
+      
+      // Immediately redraw to show initial movement
+      drawPieChart();
+      
+      // Create a smooth "pop out" animation effect
+      const animateDetachment = () => {
+        // Start animation with very smooth effects
+        const startTime = performance.now();
+        const duration = 400; // Shorter duration for more immediate response
+        
+        const animate = (timestamp) => {
+          const elapsed = timestamp - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          
+          // Use a simple ease-out function for quick start, gradual end
+          const easeOutQuad = (x) => 1 - (1 - x) * (1 - x);
+          
+          // Apply easing to make the animation smoother
+          const easedProgress = easeOutQuad(progress);
+          
+          // Store the animation progress for use in drawPieChart
+          setAnimationProgress(easedProgress);
+          
+          // Redraw the chart to show the animation
+          drawPieChart();
+          
+          // Continue animation if not complete
+          if (elapsed < duration) {
+            animationRef.current = requestAnimationFrame(animate);
+          } else {
+            // Keep the segment detached while selected
+            // No return animation needed as the segment should stay detached
+            animationRef.current = null;
+          }
+        };
+        
+        // Start the animation immediately
+        animationRef.current = requestAnimationFrame(animate);
+      };
+      
+      // Start the detachment animation immediately
+      animateDetachment();
     }
   };
 
-  // Handle click on tokenomics card
+  // Handle click on tokenomics card with animation
   const handleCardClick = (item) => {
-    // Toggle selection state
-    setSelectedSection(item === selectedSection ? null : item);
+    // If we clicked the same section that's already selected, do nothing
+    if (selectedSection && item.allocation === selectedSection.allocation) {
+      return;
+    }
+    
+    // If we're already animating, cancel any ongoing animations
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+    
+    // Set the selected section immediately
+    setSelectedSection(item);
+    
+    // Set the highlighted section immediately
+    setHighlightedSection(item);
+    
+    // Start with a small initial progress to show immediate feedback
+    setAnimationProgress(0.1);
+    
+    // Immediately redraw to show initial movement
+    drawPieChart();
+    
+    // Create a smooth "pop out" animation effect
+    const animateDetachment = () => {
+      // Start animation with very smooth effects
+      const startTime = performance.now();
+      const duration = 400; // Shorter duration for more immediate response
+      
+      const animate = (timestamp) => {
+        const elapsed = timestamp - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Use a simple ease-out function for quick start, gradual end
+        const easeOutQuad = (x) => 1 - (1 - x) * (1 - x);
+        
+        // Apply easing to make the animation smoother
+        const easedProgress = easeOutQuad(progress);
+        
+        // Store the animation progress for use in drawPieChart
+        setAnimationProgress(easedProgress);
+        
+        // Redraw the chart to show the animation
+        drawPieChart();
+        
+        // Continue animation if not complete
+        if (elapsed < duration) {
+          animationRef.current = requestAnimationFrame(animate);
+        } else {
+          // Keep the segment detached while selected
+          // No return animation needed as the segment should stay detached
+          animationRef.current = null;
+        }
+      };
+      
+      // Start the animation immediately
+      animationRef.current = requestAnimationFrame(animate);
+    };
+    
+    // Start the detachment animation immediately
+    animateDetachment();
   };
 
   // Calculate total supply for display

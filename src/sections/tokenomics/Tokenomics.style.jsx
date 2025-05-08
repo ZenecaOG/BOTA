@@ -24,6 +24,40 @@ const pulse = keyframes`
   }
 `;
 
+const popOut = keyframes`
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.08);
+  }
+  70% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+`;
+
+const detachSegment = keyframes`
+  0% {
+    transform: translateX(0) translateY(0);
+    filter: brightness(1);
+  }
+  40% {
+    transform: translateX(var(--detach-x, 8px)) translateY(var(--detach-y, -8px));
+    filter: brightness(1.2);
+  }
+  70% {
+    transform: translateX(var(--detach-x, 6px)) translateY(var(--detach-y, -6px));
+    filter: brightness(1.15);
+  }
+  100% {
+    transform: translateX(0) translateY(0);
+    filter: brightness(1);
+  }
+`;
+
 const TokenomicsWrapper = styled.section`
   padding: 100px 0;
   position: relative;
@@ -112,6 +146,18 @@ const TokenomicsWrapper = styled.section`
         max-height: 100%;
         position: relative;
         z-index: 1;
+        transition: transform 0.3s ease;
+        
+        &:hover {
+          transform: scale(1.02) translateY(-3px);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+          transition: all 0.3s ease;
+        }
+        
+        &.animating {
+          animation: ${popOut} 0.7s ease-out;
+          box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+        }
       }
       
       /* Tooltip styling */
@@ -251,14 +297,15 @@ const TokenomicsWrapper = styled.section`
       transition: all 0.3s ease;
       animation: highlightPulse 1.5s ease-in-out;
       z-index: 10; /* Ensure highlighted card appears above others */
+      transform: translateY(-12px) scale(1.08); /* More pronounced pop effect */
     }
     
     @keyframes highlightPulse {
-      0% { transform: scale(1); box-shadow: 0 0 15px 5px rgba(var(--accent-color-rgb, 29, 255, 150), 0.5); }
-      25% { transform: scale(1.05); box-shadow: 0 0 25px 10px rgba(var(--accent-color-rgb, 29, 255, 150), 0.6); }
-      50% { transform: scale(1.02); box-shadow: 0 0 20px 8px rgba(var(--accent-color-rgb, 29, 255, 150), 0.5); }
-      75% { transform: scale(1.03); box-shadow: 0 0 22px 9px rgba(var(--accent-color-rgb, 29, 255, 150), 0.55); }
-      100% { transform: scale(1); box-shadow: 0 0 15px 5px rgba(var(--accent-color-rgb, 29, 255, 150), 0.5); }
+      0% { transform: translateY(-8px) scale(1.05); box-shadow: 0 0 15px 5px rgba(var(--accent-color-rgb, 29, 255, 150), 0.5); }
+      25% { transform: translateY(-12px) scale(1.08); box-shadow: 0 0 25px 10px rgba(var(--accent-color-rgb, 29, 255, 150), 0.6); }
+      50% { transform: translateY(-10px) scale(1.06); box-shadow: 0 0 20px 8px rgba(var(--accent-color-rgb, 29, 255, 150), 0.5); }
+      75% { transform: translateY(-11px) scale(1.07); box-shadow: 0 0 22px 9px rgba(var(--accent-color-rgb, 29, 255, 150), 0.55); }
+      100% { transform: translateY(-8px) scale(1.05); box-shadow: 0 0 15px 5px rgba(var(--accent-color-rgb, 29, 255, 150), 0.5); }
     }
 
     .percentage {
